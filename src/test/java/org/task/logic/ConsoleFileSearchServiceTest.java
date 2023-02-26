@@ -14,7 +14,7 @@ import java.util.Scanner;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class ConsoleServiceTest {
+class ConsoleFileSearchServiceTest {
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
 
     // Set up System.out to write to outContent before each test
@@ -28,6 +28,7 @@ class ConsoleServiceTest {
     void restoreStreams() {
         System.setOut(System.out);
     }
+
     @Test
     void assertGetDepthUnhappyTest() {
         String data = "-4\r\n";
@@ -35,7 +36,7 @@ class ConsoleServiceTest {
         try {
             System.setIn(new ByteArrayInputStream(data.getBytes()));
             Scanner scanner = new Scanner(System.in);
-            assertThrows(NoSuchElementException.class, () -> ConsoleService.getDepth(scanner));
+            assertThrows(NoSuchElementException.class, () -> ConsoleFileSearchService.getDepth(scanner));
             assertEquals("Incorrect depth. Must be positive digits. Or type exit", outContent.toString().trim());
         } finally {
             System.setIn(stdin);
@@ -47,19 +48,19 @@ class ConsoleServiceTest {
         String data = "4\r\n";
         System.setIn(new ByteArrayInputStream(data.getBytes()));
         Scanner scanner = new Scanner(System.in);
-        ConsoleService.getDepth(scanner);
-        String inputString = scanner. nextLine();
-        assertEquals(inputString,"");
+        ConsoleFileSearchService.getDepth(scanner);
+        String inputString = scanner.nextLine();
+        assertEquals(inputString, "");
     }
 
     @Test
     void checkTheAbsolutePathHappyTest() {
-        String data = "C:\\Users\\kurin\\IdeaProjects\\ProductEngine\r\n";
+        String data = "src\\\r\n";
         System.setIn(new ByteArrayInputStream(data.getBytes()));
         Scanner scanner = new Scanner(System.in);
-        ConsoleService.checkTheAbsolutePath(scanner);
-        String inputString = scanner. nextLine();
-        assertEquals(inputString,"");
+        ConsoleFileSearchService.checkTheAbsolutePath(scanner);
+        String inputString = scanner.nextLine();
+        assertEquals(inputString, "");
     }
 
     @Test
@@ -69,10 +70,11 @@ class ConsoleServiceTest {
         try {
             System.setIn(new ByteArrayInputStream(data.getBytes()));
             Scanner scanner = new Scanner(System.in);
-            assertThrows(NoSuchElementException.class, () -> ConsoleService.checkTheAbsolutePath(scanner));
-            assertEquals("Incorrect path, try another or type exit to quit", outContent.toString().trim());
+            assertThrows(NoSuchElementException.class, () -> ConsoleFileSearchService.checkTheAbsolutePath(scanner));
+            assertEquals("Incorrect path. Must starts from src\\, try another or type exit to quit", outContent.toString().trim());
         } finally {
             System.setIn(stdin);
         }
     }
+
 }

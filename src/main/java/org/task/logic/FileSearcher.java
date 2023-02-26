@@ -3,82 +3,80 @@ package org.task.logic;
 import java.io.File;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class FileSearcher {
+    /**
+     * This method searches for files within a specified directory and at a specified depth level
+     * and matching a specified mask.
+     *
+     * @param rootPath the directory path to start the search from
+     * @param depth    the depth level to search for files within
+     * @param mask     the file name mask to match
+     * @throws InterruptedException if an error occurs during the execution of the method
+     */
+    public static void search(String rootPath, int depth, String mask) throws InterruptedException {
 
-    protected static void search(String rootPath, int depth, String mask) throws InterruptedException {
-        // Create a stack to keep track of files to search, starting with the root path
+        // Create a stack to store the files to be searched
         Deque<File> stack = new ArrayDeque<>();
         stack.push(new File(rootPath));
-        AtomicBoolean foundAnything= new AtomicBoolean(false);
-        // Keep track of the current depth of the search
+
+        // Create an atomic integer to keep track of the current depth level
         AtomicInteger currentDepth = new AtomicInteger();
-        // Create an executor with two threads
+
+        // Create an executor service with a fixed thread pool of two threads
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
-        // Submit the search task to the executor
-        Future<?> searchFuture = executor.submit(() -> {
-            // Loop until there are no more files to search
+        // Create a blocking queue to store the search results
+        BlockingQueue<String> resultsQueue = new LinkedBlockingQueue<>();
+
+        // Submit a task to the executor to search for files
+        executor.submit(() -> {
             while (!stack.isEmpty()) {
                 File current = stack.pop();
-                // If it's a directory, add its contents to the stack
+
+                // If the current file is a directory, add its contents to the stack
                 if (current.isDirectory()) {
                     currentDepth.getAndIncrement();
-                    // Interrupt when depth is exceeded the initial value
-                    if(currentDepth.get() > depth){
-                        return;
-                    }
                     File[] files = current.listFiles();
+
                     if (files != null) {
                         for (File file : files) {
                             stack.push(file);
                         }
                     }
-                    // If it's a file at the desired depth and matches the mask, print the result
-                } else if (currentDepth.get() == depth && current.getName().contains(mask)) {
-                    printResult(current.getName());
+                }
+
+                // If the current file matches the search criteria, add its name to the results queue
+                else if (currentDepth.get() == depth && current.getName().contains(mask)) {
+                    resultsQueue.offer(current.getName());
                 }
             }
+
+            // Add an "END_OF_RESULTS" marker to the results queue to indicate the end of the search
+            resultsQueue.offer("END_OF_RESULTS");
         });
 
-        // Submit the print task to the executor
+        // Submit a task to the executor to print the search results to the console
         executor.submit(() -> {
-            // Loop until the search is done and there are no more results to print
-            while (!searchFuture.isDone() || !resultQueue.isEmpty()) {
-                // Poll the next result from the queue
-                String result = resultQueue.poll();
-                // If there is a result, print it to the console
-                if (result != null) {
+            try {
+                while (true) {
+                    String result = resultsQueue.take();
+                    if (result.equals("END_OF_RESULTS")) {
+                        break;
+                    }
                     System.out.println(result);
-                    foundAnything.set(true);
                 }
+            } catch (InterruptedException e) {
+                // Handle the interrupt exception by setting the current thread's interrupt status
+                Thread.currentThread().interrupt();
             }
         });
 
-        // Shutdown the executor when both tasks are done
+        // Shut down the executor service and wait for all tasks to complete
         executor.shutdown();
         executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-        printNothingFoundCase(foundAnything);
-    }
-
-    private static void printNothingFoundCase(AtomicBoolean foundAnything) {
-        if(!foundAnything.get()) {
-            System.out.println("---<<<Nothing were found!>>>---");
-        }
-    }
-
-    // Create a queue to hold results to be printed
-    private static final Deque<String> resultQueue = new ArrayDeque<>();
-
-    // Method to add a result to the queue
-    private static synchronized void printResult(String result) {
-        resultQueue.offer(result);
     }
 
 }
