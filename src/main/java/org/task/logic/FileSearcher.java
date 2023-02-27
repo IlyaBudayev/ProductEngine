@@ -2,8 +2,14 @@ package org.task.logic;
 
 import java.io.File;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
-import java.util.concurrent.*;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class FileSearcher {
@@ -14,10 +20,12 @@ public class FileSearcher {
      * @param rootPath the directory path to start the search from
      * @param depth    the depth level to search for files within
      * @param mask     the file name mask to match
+     * @return searchResult the file contains searching results
      * @throws InterruptedException if an error occurs during the execution of the method
      */
-    public static void search(String rootPath, int depth, String mask) throws InterruptedException {
+    public static List<String> search(String rootPath, int depth, String mask) throws InterruptedException {
 
+        List<String> searchResult = new ArrayList<>();
         // Create a stack to store the files to be searched
         Deque<File> stack = new ArrayDeque<>();
         stack.push(new File(rootPath));
@@ -67,6 +75,7 @@ public class FileSearcher {
                         break;
                     }
                     System.out.println(result);
+                    searchResult.add(result);
                 }
             } catch (InterruptedException e) {
                 // Handle the interrupt exception by setting the current thread's interrupt status
@@ -77,6 +86,7 @@ public class FileSearcher {
         // Shut down the executor service and wait for all tasks to complete
         executor.shutdown();
         executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+        return searchResult;
     }
 
 }
